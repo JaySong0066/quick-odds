@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b0f14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="快速赔率">
+<title>快速赔率 · Quick Odds</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#141b23; --panel2:#1c2530; --line:#2a3644;
+    --text:#e8eef4; --dim:#8fa0b3; --faint:#5b6b7d;
+    --green:#2ecc71; --amber:#f5b94b; --red:#ff5a5f; --accent:#31c48d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{background:#05070a;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--text); display:flex; justify-content:center; min-height:100vh;
+  }
+  #app{width:100%; max-width:430px; background:var(--bg); min-height:100vh; display:flex; flex-direction:column; padding:14px 16px 20px; gap:12px;}
+  header{display:flex; align-items:center; gap:9px; padding:4px 2px;}
+  header .mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#2ecc71,#1a9e5c);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  header h1{font-size:17px; font-weight:800;}
+  header .sub{font-size:10.5px; color:var(--faint);}
+  header .off{margin-left:auto; font-size:10px; color:var(--faint); border:1px solid var(--line); border-radius:99px; padding:3px 9px;}
+
+  /* verdict */
+  #verdict{border-radius:20px; padding:18px 16px 16px; text-align:center; transition:background .25s,border-color .25s; border:1px solid var(--line); background:var(--panel);}
+  #verdict .vi{font-size:30px; line-height:1;}
+  #verdict h2{font-size:23px; font-weight:900; margin:7px 0 3px; letter-spacing:.02em;}
+  #verdict p{font-size:12px; opacity:.85; line-height:1.5;}
+  #verdict.good{background:linear-gradient(160deg,#16532f,#0f2e1d); border-color:#2ecc71;}
+  #verdict.edge{background:linear-gradient(160deg,#54401a,#2e2410); border-color:#f5b94b;}
+  #verdict.bad{background:linear-gradient(160deg,#5a2126,#31161a); border-color:#ff5a5f;}
+  #verdict.idle{color:var(--dim);}
+
+  .cmp{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:12px 14px;}
+  .bar-row{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim); margin:6px 0;}
+  .bar-row .nm{width:56px; text-align:right; flex-shrink:0;}
+  .bar-row .bar{flex:1; height:13px; background:#0e141b; border-radius:99px; overflow:hidden;}
+  .bar-row .bar i{display:block; height:100%; border-radius:99px; transition:width .25s; background:#5b6b7d;}
+  .bar-row .pct{width:46px; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; flex-shrink:0;}
+
+  .stats{display:flex; gap:9px;}
+  .stat{flex:1; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:9px 11px;}
+  .stat .k{font-size:10px; color:var(--dim); margin-bottom:2px;}
+  .stat .v{font-size:17px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .stat .v.pos{color:var(--green);} .stat .v.neg{color:var(--red);}
+  #implied{display:none; font-size:11.5px; color:#ffd48a; background:#3a2c10; border:1px solid #6b5320; border-radius:12px; padding:9px 12px; line-height:1.55;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:12px 14px;}
+  .field-title{font-size:11.5px; color:var(--dim); margin-bottom:7px; display:flex; justify-content:space-between;}
+  .stepper{display:flex; align-items:center; justify-content:space-between; background:var(--panel2); border-radius:13px; padding:6px 8px;}
+  .stepper button{width:46px;height:42px;border-radius:11px;border:none;background:#26303d;color:var(--text);font-size:21px;font-weight:700; cursor:pointer;}
+  .stepper button:active{background:#314052;}
+  .stepper .val{font-size:29px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .stepper .val small{font-size:11px; color:var(--dim); font-weight:500;}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .chip{font-size:11px; padding:7px 9px; border-radius:99px; background:var(--panel2); border:1px solid var(--line); color:var(--dim); cursor:pointer; user-select:none;}
+  .chip.on{background:#123c26; border-color:#1f5c3c; color:#7fe0ae; font-weight:700;}
+  .amount{display:flex; align-items:center; background:var(--panel2); border-radius:13px; padding:4px 12px; gap:8px;}
+  .amount .cur{color:var(--faint); font-size:13px;}
+  .amount input{flex:1; min-width:0; background:transparent; border:none; outline:none; color:var(--text); font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; padding:8px 0; font-family:inherit;}
+  .qk{display:flex; gap:6px; margin-top:8px;}
+  .qk span{flex:1; text-align:center; font-size:11px; padding:7px 0; border-radius:9px; background:var(--panel2); border:1px solid var(--line); color:var(--dim); cursor:pointer; user-select:none;}
+  .qk span:active{background:#26303d;}
+  .seg{display:flex; background:var(--panel2); border-radius:12px; padding:3px; gap:3px;}
+  .seg div{flex:1; text-align:center; font-size:11px; padding:8px 2px; border-radius:9px; color:var(--dim); cursor:pointer; line-height:1.35; user-select:none;}
+  .seg .on{background:#2b3a4b; color:var(--text); font-weight:700;}
+  .seg small{display:block; font-size:9px; color:var(--faint);}
+  #twoCardHint{display:none; font-size:10px; color:var(--faint); margin-top:7px; line-height:1.5;}
+
+  details{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:0 14px;}
+  details summary{list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--dim); padding:12px 0;}
+  details summary::after{content:"⌄"; transition:transform .2s;}
+  details[open] summary::after{transform:rotate(180deg);}
+  details .body{padding:0 0 12px; font-size:11.5px; color:var(--dim); line-height:1.7;}
+  details table{width:100%; border-collapse:collapse; font-size:10.5px; font-variant-numeric:tabular-nums;}
+  details th, details td{padding:4px 2px; text-align:center; border-bottom:1px solid var(--line); color:var(--dim);}
+  details th{color:var(--faint); font-weight:600;}
+  details td:first-child{text-align:left; color:var(--text);}
+  code{background:#0e141b; border-radius:5px; padding:1px 5px; font-size:10.5px; color:#9fd6bb;}
+  footer{font-size:9.5px; color:var(--faint); text-align:center; line-height:1.6; padding:2px 10px 6px; margin-top:auto;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="mark">♠</div>
+    <div><h1>快速赔率</h1><div class="sub">Quick Odds · 跟注划不划算,3 秒知道</div></div>
+    <div class="off">离线可用</div>
+  </header>
+
+  <div id="verdict" class="idle">
+    <div class="vi">🂠</div>
+    <h2>等待输入</h2>
+    <p>选择 Outs,填入底池与跟注金额</p>
+  </div>
+
+  <div class="cmp">
+    <div class="bar-row"><span class="nm">需要胜率</span><div class="bar"><i id="barNeed"></i></div><span class="pct" id="pctNeed">–</span></div>
+    <div class="bar-row"><span class="nm">实际胜率</span><div class="bar"><i id="barHave"></i></div><span class="pct" id="pctHave">–</span></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">跟注 EV</div><div class="v" id="stEV">–</div></div>
+    <div class="stat"><div class="k">底池赔率</div><div class="v" id="stPot">–</div></div>
+    <div class="stat"><div class="k">听牌赔率</div><div class="v" id="stDraw">–</div></div>
+  </div>
+
+  <div id="implied"></div>
+
+  <div class="card">
+    <div class="field-title"><span>我的 Outs(补牌数)</span><span id="outsRule"></span></div>
+    <div class="stepper">
+      <button id="outsMinus" aria-label="减少">−</button>
+      <div class="val"><span id="outsVal">9</span> <small>outs</small></div>
+      <button id="outsPlus" aria-label="增加">+</button>
+    </div>
+    <div class="chips" id="outChips"></div>
+  </div>
+
+  <div class="card">
+    <div class="field-title"><span>底池金额(含对手本轮下注)</span></div>
+    <div class="amount"><span class="cur">¤</span><input id="pot" type="text" inputmode="decimal" placeholder="0" value="200"></div>
+    <div class="qk" id="potQk"><span data-v="+10">+10</span><span data-v="+50">+50</span><span data-v="+100">+100</span><span data-v="0">清零</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field-title"><span>需要跟注</span></div>
+    <div class="amount"><span class="cur">¤</span><input id="call" type="text" inputmode="decimal" placeholder="0" value="50"></div>
+    <div class="qk" id="callQk"><span data-f="0.3333">⅓池</span><span data-f="0.5">½池</span><span data-f="0.6667">⅔池</span><span data-f="1">1池</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field-title"><span>现在是哪条街</span></div>
+    <div class="seg" id="street">
+      <div data-s="flop1">翻牌圈<small>只看转牌 · ÷47</small></div>
+      <div data-s="flop2">翻牌圈<small>看到河牌 · 两张</small></div>
+      <div data-s="turn" class="on">转牌圈<small>看河牌 · ÷46</small></div>
+    </div>
+    <div id="twoCardHint">⚠ 两张口径假设后续无需再投入(如已 all-in);若转牌还要面对下注,请用单街口径。</div>
+  </div>
+
+  <details>
+    <summary>本次计算过程</summary>
+    <div class="body" id="formulaBody">–</div>
+  </details>
+
+  <details>
+    <summary>2 / 4 倍法则速查表</summary>
+    <div class="body">
+      <table>
+        <tr><th>听牌</th><th>Outs</th><th>翻→转</th><th>转→河</th><th>翻→河</th></tr>
+        <tr><td>对子变三条</td><td>2</td><td>4.3%</td><td>4.3%</td><td>8.4%</td></tr>
+        <tr><td>卡顺</td><td>4</td><td>8.5%</td><td>8.7%</td><td>16.5%</td></tr>
+        <tr><td>两高张</td><td>6</td><td>12.8%</td><td>13.0%</td><td>24.1%</td></tr>
+        <tr><td>两头顺</td><td>8</td><td>17.0%</td><td>17.4%</td><td>31.5%</td></tr>
+        <tr><td>同花听牌</td><td>9</td><td>19.1%</td><td>19.6%</td><td>35.0%</td></tr>
+        <tr><td>同花+高张</td><td>12</td><td>25.5%</td><td>26.1%</td><td>45.0%</td></tr>
+        <tr><td>顺+同花</td><td>15</td><td>31.9%</td><td>32.6%</td><td>54.1%</td></tr>
+      </table>
+      <div style="margin-top:8px">心算法则:单街胜率 ≈ Outs × 2%;翻牌看两张 ≈ Outs × 4%(Outs 多时略偏高)。</div>
+    </div>
+  </details>
+
+  <details>
+    <summary>什么是隐含赔率?</summary>
+    <div class="body">当直接赔率略亏时,如果你击中听牌后还能<b style="color:var(--text)">继续从对手身上赢到额外筹码</b>,跟注仍可能有利可图。本 App 会在 EV 为负时告诉你:后续平均需要多赢多少才打平。对手筹码越深、你的听牌越隐蔽,隐含赔率越好;但小心「反向隐含赔率」——击中后仍可能输给更大的牌。</div>
+  </details>
+
+  <footer>仅供学习与线下复盘 · 请勿在在线牌局进行中使用(违反平台 RTA 规则)<br>需要胜率 = 跟注 ÷ (底池 + 跟注) · EV = 胜率 × 底池 − (1−胜率) × 跟注</footer>
+</div>
+
+<script>
+/*CALC-START*/
+function calcOdds(outs, pot, call, street){
+  // street: 'flop1' outs/47 | 'flop2' 两张 | 'turn' outs/46
+  const unseen = street === 'turn' ? 46 : 47;
+  let eq;
+  if (street === 'flop2'){
+    eq = 1 - ((unseen - outs) / unseen) * ((unseen - 1 - outs) / (unseen - 1));
+  } else {
+    eq = outs / unseen;
+  }
+  const valid = outs > 0 && pot > 0 && call > 0 && outs <= (street==='turn'?21:21);
+  const need = call > 0 ? call / (pot + call) : 0;
+  const ev = eq * pot - (1 - eq) * call;
+  const potOdds = call > 0 ? pot / call : 0;            // X : 1
+  const drawOdds = eq > 0 ? (1 - eq) / eq : 0;          // X : 1
+  const impliedGap = eq > 0 ? (1 - eq) * call / eq - pot : 0; // 额外需赢
+  let verdict = 'idle';
+  if (valid){
+    const d = eq - need;
+    verdict = d >= 0.02 ? 'good' : (d <= -0.02 ? 'bad' : 'edge');
+  }
+  return {eq, need, ev, potOdds, drawOdds, impliedGap, verdict, valid};
+}
+/*CALC-END*/
+
+const $ = id => document.getElementById(id);
+const state = {outs:9, pot:200, call:50, street:'turn'};
+let lastVerdict = null;
+
+const CHIPS = [["对变三条",2],["卡顺",4],["两高张",6],["两头顺",8],["同花听牌",9],["花+高张",12],["顺+花",15]];
+CHIPS.forEach(([nm,n])=>{
+  const c = document.createElement('span');
+  c.className='chip'; c.textContent = nm + ' ' + n; c.dataset.n = n;
+  c.onclick = ()=>{ state.outs = n; render(); };
+  $('outChips').appendChild(c);
+});
+
+$('outsMinus').onclick = ()=>{ state.outs = Math.max(0, state.outs-1); render(); };
+$('outsPlus').onclick  = ()=>{ state.outs = Math.min(21, state.outs+1); render(); };
+
+function parseNum(el){ const v = parseFloat(String(el.value).replace(/[^\d.]/g,'')); return isFinite(v) && v >= 0 ? v : 0; }
+$('pot').addEventListener('input', ()=>{ state.pot = parseNum($('pot')); render(false); });
+$('call').addEventListener('input', ()=>{ state.call = parseNum($('call')); render(false); });
+
+$('potQk').addEventListener('click', e=>{
+  const v = e.target.dataset.v; if(v===undefined) return;
+  state.pot = v === "0" ? 0 : state.pot + parseFloat(v);
+  $('pot').value = fmt(state.pot); render(false);
+});
+$('callQk').addEventListener('click', e=>{
+  const f = e.target.dataset.f; if(f===undefined) return;
+  state.call = Math.round(state.pot * parseFloat(f) * 100) / 100;
+  $('call').value = fmt(state.call); render(false);
+});
+$('street').addEventListener('click', e=>{
+  const s = e.target.closest('[data-s]'); if(!s) return;
+  state.street = s.dataset.s; render();
+});
+
+function fmt(n){ return Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(1); }
+function pct(x){ return (x*100).toFixed(1) + '%'; }
+function ratio(x){ return x >= 100 ? Math.round(x)+' : 1' : (Math.round(x*10)/10) + ' : 1'; }
+
+const V = {
+  good:{ic:'✓', t:'值得跟注', cls:'good'},
+  edge:{ic:'≈', t:'边缘决策', cls:'edge'},
+  bad :{ic:'✗', t:'建议弃牌', cls:'bad'},
+  idle:{ic:'🂠', t:'等待输入', cls:'idle'}
+};
+
+function render(syncInputs = true){
+  if (syncInputs){ $('pot').value = fmt(state.pot); $('call').value = fmt(state.call); }
+  $('outsVal').textContent = state.outs;
+  document.querySelectorAll('#outChips .chip').forEach(c=>c.classList.toggle('on', +c.dataset.n === state.outs));
+  document.querySelectorAll('#street [data-s]').forEach(d=>d.classList.toggle('on', d.dataset.s === state.street));
+  $('twoCardHint').style.display = state.street === 'flop2' ? 'block' : 'none';
+  const mult = state.street === 'flop2' ? 4 : 2;
+  $('outsRule').textContent = `≈ ${state.outs} × ${mult}% = ${state.outs*mult}%`;
+
+  const r = calcOdds(state.outs, state.pot, state.call, state.street);
+
+  const vd = $('verdict'), info = V[r.valid ? r.verdict : 'idle'];
+  vd.className = info.cls;
+  vd.querySelector('.vi').textContent = info.ic;
+  vd.querySelector('h2').textContent = info.t;
+  const p = vd.querySelector('p');
+  if (!r.valid){
+    p.textContent = '选择 Outs,填入底池与跟注金额';
+  } else {
+    const gap = ((r.eq - r.need)*100).toFixed(1);
+    if (r.verdict==='good') p.textContent = `你的胜率高于底池赔率要求 ${gap} 个百分点`;
+    else if (r.verdict==='bad') p.textContent = `胜率低于要求 ${Math.abs(gap)} 个百分点,直接跟注亏损`;
+    else p.textContent = `与要求仅差 ${Math.abs(gap)} 个百分点 — 看隐含赔率与读牌决定`;
+  }
+
+  $('barNeed').style.width = r.valid ? Math.min(100, r.need*100) + '%' : '0%';
+  $('barHave').style.width = r.valid ? Math.min(100, r.eq*100) + '%' : '0%';
+  $('barHave').style.background = r.verdict==='bad' ? 'var(--red)' : (r.verdict==='edge' ? 'var(--amber)' : 'var(--green)');
+  $('pctNeed').textContent = r.valid ? pct(r.need) : '–';
+  $('pctHave').textContent = r.valid ? pct(r.eq) : '–';
+
+  const ev = $('stEV');
+  ev.textContent = r.valid ? (r.ev>0?'+':'') + (Math.round(r.ev*10)/10) : '–';
+  ev.className = 'v ' + (r.valid ? (r.ev > 0.0001 ? 'pos' : (r.ev < -0.0001 ? 'neg' : '')) : '');
+  $('stPot').textContent = r.valid ? ratio(r.potOdds) : '–';
+  $('stDraw').textContent = r.valid ? ratio(r.drawOdds) : '–';
+
+  const imp = $('implied');
+  if (r.valid && r.ev < -0.0001){
+    imp.style.display = 'block';
+    imp.innerHTML = `💡 隐含赔率:击中后若能再从对手处平均多赢 <b>${(Math.round(r.impliedGap*10)/10)}</b>,本次跟注即打平。`;
+  } else imp.style.display = 'none';
+
+  if (r.valid){
+    const unseen = state.street==='turn'?46:47;
+    const eqExpr = state.street==='flop2'
+      ? `1 − (${unseen-state.outs}/${unseen})×(${unseen-1-state.outs}/${unseen-1})`
+      : `${state.outs} ÷ ${unseen}`;
+    $('formulaBody').innerHTML =
+      `需要胜率 = <code>${fmt(state.call)} ÷ (${fmt(state.pot)} + ${fmt(state.call)})</code> = <b>${pct(r.need)}</b><br>` +
+      `实际胜率 = <code>${eqExpr}</code> = <b>${pct(r.eq)}</b><br>` +
+      `EV = <code>${pct(r.eq)} × ${fmt(state.pot)} − ${pct(1-r.eq)} × ${fmt(state.call)}</code> = <b>${(Math.round(r.ev*10)/10)}</b>`;
+  } else {
+    $('formulaBody').textContent = '输入完成后此处展开公式。';
+  }
+
+  if (r.valid && lastVerdict && lastVerdict !== r.verdict && navigator.vibrate) navigator.vibrate(30);
+  if (r.valid) lastVerdict = r.verdict;
+}
+
+render();
+
+// PWA:注册 Service Worker(仅 https/localhost 环境生效)
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
